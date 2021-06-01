@@ -85,7 +85,6 @@ sections string =
     in
         M.fromList assocList
 
--- TODO: Ask Adam about Int, Integer, Integral, fromIntegral and Num (what is Num??)
 euclidian2d :: (Int, Int) -> (Int, Int) -> Integer
 euclidian2d (x, y) (x', y') = 
     let
@@ -119,10 +118,9 @@ readTSP string =
         is = map (read) ws :: [Int]
         ts = triples is
         coordsList = map (\(x,y,z) -> (y,z)) ts
-        coords = trace (unlines [ show (i, j, euclidian2d x y) | (i,x) <- zip [0..] coordsList, (j,y) <- zip [0..] coordsList]) M.fromList $ zip [0..] coordsList
-        tsp = TSP { n = n, costOf = weight coords }
-    in 
-        tsp
+        coords = M.fromList $ zip [0..] coordsList
+    in
+         TSP { n = n, costOf = weight coords }
 
 -- frequency :: Ord a => [a] -> [(Int,a)] 
 -- frequency list = map (\l -> (length l, head l)) (L.group (L.sort list))

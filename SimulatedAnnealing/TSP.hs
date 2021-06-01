@@ -83,36 +83,13 @@ swap x y a = if x == a then y else if y == a then x else a
 moveEnergy :: Tour -> Move -> TSP -> Cost
 moveEnergy t (i, j) TSP{..} =
     let
-        ec x y = costOf (t !? x, t !? y)
-        -- Cost of a subsequence of the tour (list of indices)
-        -- tc = tourCostBy (uncurry ec)
-        cc l = let [new,old] = map (sum . (map (uncurry ec))) l in new - old
+        costI x y = costOf (t !? x, t !? y)
+        sumCost = sum . (map (\[p,q] -> costI p q))
         (a:(b:(c:_))) = rotateMod (i-1) n
         (d:(e:(f:_))) = rotateMod (j-1) n
-        xxx = [a,b,c,d,e,f]
-        es = [[a,b], [b,c], [d,e], [e,f]]
-        es' = L.nub es
-        rs = map (map (swap i j)) es
-        rs' = L.nub rs
-
-        ww = sum . (map (\[p,q] -> ec p q))
-
-        r = trace (show (i,j) ++ "\n" ++ show xxx ++ "\n" ++ show es ++ "\n" ++ show es' ++ "\n\n" ++ show rs ++ "\n" ++ show rs' ++ "\n\n\n") ww rs' - ww es'
-        -- us = L.nub [i1,i2,i3,j1,j2,j3]
-
-        -- r = case us of 
-        --     [_,_,_]         -> trace (show 0) 0
-        --     [a,b,c,d]       -> let xxx= cc [[(a,c), (c,b), (b,d)],                  [(a,b), (b,c), (c,d)]] in trace (show xxx) xxx
-        --     [a,b,c,d,e]     -> let xxx= cc [[(a,d), (d,c), (c,b), (b,e)],           [(a,b), (b,c), (c,d), (d,e)]]in trace (show xxx) xxx
-        --     [a,b,c,d,e,f]   -> let xxx= cc [[(a,e), (e,c), (c,d), (d,b), (b,f)],    [(a,b), (b,c), (c,d), (d,e), (e,f)]]in trace (show xxx) xxx
-        --     _               -> error "This should not happen."
-        -- r = case L.nub [i1,i2,i3,j1,j2,j3] of 
-        --     [_,_,_]         -> 0
-        --     [a,b,c,d]       -> tc [a,c,b,d] - tc [a,b,c,d]
-        --     [a,b,c,d,e]     -> tc [a,d,c,b,e] - tc [a,b,c,d,e]
-        --     [a,b,c,d,e,f]   -> tc [a,e,c,d,b,f] - (tc [a,b,c,d,e,f])
-        --     _               -> error "This should not happen."
-    in trace ( show r ) r
+        edges = L.nub $ [[a,b], [b,c], [d,e], [e,f]]
+        edges' = L.nub $ map (map (swap i j)) edges
+    in sumCost edges' - sumCost edges
 
 moveTSP :: TSP -> (Solution -> Temp -> AState Solution)
 moveTSP tsp@(TSP{..}) = move where
@@ -125,21 +102,16 @@ moveTSP tsp@(TSP{..}) = move where
         randProb <- uniformProb
         let
             deltaNum = fromIntegral $ delta
-            dT = deltaNum / temp
-            acceptProb = min 1 $ exp (0 - dT)
-            accept = (delta < 0) || (acceptProb > randProb)
-        return $ if accept
-            then let ttt = (update tour (i, j), energy + delta) in trace (show ttt ++ "accepted") ttt
-            else let ttt = (tour, energy) in trace (show ttt ++ "rejected") ttt
+            acceptWorse = randProb < min 1 (exp (0 - deltaNum / temp))
+            accept = (delta < 0) || acceptWorse
+            tour' = update tour (i, j)
+            energy' = energy + delta
+        return $ if accept then (tour', energy') else (tour, energy)
 
 tourCostBy :: (Foldable t) => CostFunc -> t Node -> Cost
 tourCostBy costOf t = fst $ foldr' f (0, head) t where
-    -- t = (toList tour)
---  where
-    -- Add the cost of the edge, and pass the node to the next iteration
     f curr (acc, prev) = (acc + costOf (curr,prev), curr)
-    -- Needed to make the tour "loops" back to start)
-    -- Equivalent to: h == head $ toList tour
+    -- Need head to make sure the tour "loops" back to start)
     head = fromJust $ getFirst $ foldMap (First . Just) t
 
 toTour :: [Node] -> Tour
