@@ -30,7 +30,7 @@ library
         SimulatedAnnealing.Shuffle
 
     build-depends:    
-        base ^>=4.15.0.0,
+        base ^>=4.14.1.0,
         containers ^>=0.6.4.1,
         mtl ^>=2.2.2,
         text ^>=1.2.4.1,
@@ -46,8 +46,8 @@ executable main
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
-    build-depends:    
-        base ^>=4.15.0.0,
+    build-depends:
+        base ^>=4.14.1.0,
         simulated-annealing ^>=0.1.0.0,
         containers ^>=0.6.4.1,
         mtl ^>=2.2.2,

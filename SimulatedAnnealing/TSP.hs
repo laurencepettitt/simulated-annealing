@@ -3,18 +3,18 @@
 
 module SimulatedAnnealing.TSP where
 
-import SimulatedAnnealing
-import Control.Monad.State
+import SimulatedAnnealing ( AState )
+import Control.Monad.State ( MonadState(put, get) )
 import qualified Data.Sequence as S (Seq, index, update, fromList, unstableSort)
 import qualified Data.List as L (nub, sort)
 -- import Data.Function 
 -- import System.Random.Shuffle (shuffle')
-import Data.Foldable
+import Data.Foldable ( Foldable(toList, foldr') )
 -- import Data.Semigroup
-import Data.Monoid
-import Data.Maybe
-import System.Random
-import Debug.Trace
+import Data.Monoid ( First(First, getFirst) )
+import Data.Maybe ( fromJust )
+import System.Random ( uniformR )
+import Debug.Trace ()
 
 type Temp = Double
 type Cost = Integer
@@ -38,13 +38,13 @@ type Solution = (Tour, Cost)
 type Move = (Node, Node)
 
 ix :: Tour -> Int -> Int
-ix t i = i `mod` (length t)
+ix t i = i `mod` length t
 
 (!?) :: Tour -> Int -> Node
 (!?) t i = S.index t $ ix t i
 
 update :: Tour -> Move -> Tour
-update t (i, j) = 
+update t (i, j) =
     let
         (i', j') = (ix t i, ix t j)
         (u, v) = (t !? i', t !? j')
@@ -52,7 +52,7 @@ update t (i, j) =
         S.update j' u $ S.update i' v t
 
 sort :: Tour -> Tour
-sort t = S.unstableSort t
+sort = S.unstableSort
 
 uniformMod' :: Int -> Int -> AState Int
 uniformMod' lo mod = do
@@ -68,7 +68,7 @@ randomMove :: Int -> AState Move
 randomMove n = do
     i <- uniformMod' 0 (n-1)
     o <- uniformMod' 1 (n-i)
-    return $ (i, i+o)
+    return (i, i+o)
 
 uniformProb :: AState Double
 uniformProb = do
@@ -78,21 +78,24 @@ uniformProb = do
             return x
 
 swap :: (Eq a) => a -> a -> a -> a
-swap x y a = if x == a then y else if y == a then x else a
+swap x y a
+  | x == a = y
+  | y == a = x
+  | otherwise = a
 
 moveEnergy :: Tour -> Move -> TSP -> Cost
 moveEnergy t (i, j) TSP{..} =
     let
         costI x y = costOf (t !? x, t !? y)
-        sumCost = sum . (map (\[p,q] -> costI p q))
+        sumCost = sum . map (\[p,q] -> costI p q)
         (a:(b:(c:_))) = rotateMod (i-1) n
         (d:(e:(f:_))) = rotateMod (j-1) n
-        edges = L.nub $ [[a,b], [b,c], [d,e], [e,f]]
+        edges = L.nub [[a,b], [b,c], [d,e], [e,f]]
         edges' = L.nub $ map (map (swap i j)) edges
     in sumCost edges' - sumCost edges
 
 moveTSP :: TSP -> (Solution -> Temp -> AState Solution)
-moveTSP tsp@(TSP{..}) = move where
+moveTSP tsp@TSP{..} = move where
     move (tour, energy) temp = do
         -- Get the indices of a random four node sub path of the tour
         (i, j) <- randomMove n
@@ -101,8 +104,8 @@ moveTSP tsp@(TSP{..}) = move where
         -- We must decide whether to accept the new tour
         randProb <- uniformProb
         let
-            deltaNum = fromIntegral $ delta
-            acceptWorse = randProb < min 1 (exp (0 - deltaNum / temp))
+            deltaNum = fromIntegral delta
+            acceptWorse = randProb < min 1 (exp (negate deltaNum / temp))
             accept = (delta < 0) || acceptWorse
             tour' = update tour (i, j)
             energy' = energy + delta
@@ -115,22 +118,22 @@ tourCostBy costOf t = fst $ foldr' f (0, head) t where
     head = fromJust $ getFirst $ foldMap (First . Just) t
 
 toTour :: [Node] -> Tour
-toTour nodes = S.fromList nodes
+toTour = S.fromList
 
 fromTour :: Tour -> [Node]
-fromTour tour = toList tour
+fromTour = toList
 
 toSolution :: [Node] -> CostFunc -> Solution
 toSolution nodes costOf = (t, tourCostBy costOf t) where t = toTour nodes
 
 trivialSolution :: Int -> CostFunc -> Solution
-trivialSolution n costOf = toSolution [0..n-1] costOf
+trivialSolution n = toSolution [0..n-1]
 
 isCostOk :: TSP -> Solution -> Bool
-isCostOk TSP{..} (t,c) = 0 == (abs $ c - (tourCostBy costOf t))  -- TODO: Better
+isCostOk TSP{..} (t,c) = 0 == abs  c - tourCostBy costOf t  -- TODO: Better
 
 isTourOk :: TSP -> Solution -> Bool
-isTourOk TSP{..} (t,c) = [0..n-1] == (fromTour $ sort t)
+isTourOk TSP{..} (t,c) = [0..n-1] == fromTour (sort t)
 
 isSolutionOk :: TSP -> Solution -> Bool
 isSolutionOk tsp s = isTourOk tsp s && isCostOk tsp s

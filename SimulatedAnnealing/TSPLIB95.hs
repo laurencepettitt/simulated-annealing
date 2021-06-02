@@ -13,12 +13,13 @@ import qualified Data.Sequence as S
 import Control.Monad.State (runState)
 import Data.Foldable (toList)
 import Debug.Trace (trace)
+import Data.List (sortOn)
 
 fieldDelim :: Char
 fieldDelim = ':'
 
 keyWords :: [String]
-keyWords = 
+keyWords =
     [
     "NAME", "TYPE", "COMMENT", "DIMENSION", "CAPACITY",
     "EDGE_WEIGHT_TYPE", "EDGE_WEIGHT_FORMAT", "EDGE_DATA_FORMAT",
@@ -40,9 +41,9 @@ spanOnPrefix prefix list = do
     return (prefix, remaining)
 
 spanOnAnyPrefix :: Eq a => [[a]] -> [a] -> Maybe ([a], [a])
-spanOnAnyPrefix prefixes list = 
+spanOnAnyPrefix prefixes list =
     let
-        maybeSplits = map (flip spanOnPrefix list) prefixes
+        maybeSplits = map (`spanOnPrefix` list) prefixes
         splits = catMaybes maybeSplits
     in
         listToMaybe splits
@@ -50,12 +51,12 @@ spanOnAnyPrefix prefixes list =
 splitBy  :: ([a] -> Maybe ([a], [a]))-> [a] -> [[a]]
 splitBy f [] = []
 splitBy f s =
-    let continue (p, s') = p : (splitBy f s')
-        search s' =  if isJust (f s')
-                    then ([], s')
-                    else if null s' then ([], [])
-                    else let (p, t) = (search $ tail s')
-                         in  (head s' : p, t)
+    let continue (p, s') = p : splitBy f s'
+        search s'
+          | isJust (f s') = ([], s')
+          | null s' = ([], [])
+          | otherwise = let (p, t) = (search $ tail s')
+                        in  (head s' : p, t)
     in maybe (continue $ search s) continue $ f s
 
 cleanField :: String -> String
@@ -78,7 +79,7 @@ triples (a : (b : (c : rs))) = (a, b, c) : triples rs
 sections :: String -> M.Map String String
 sections string =
     let
-        prefixes = L.sortBy (comparing length) keyWords
+        prefixes = sortOn length keyWords
         sectionsRaw = splitBy (spanOnAnyPrefix prefixes) string
         sectionsClean = map cleanField sectionsRaw
         assocList = uncurry zip $ pairs sectionsClean
@@ -86,7 +87,7 @@ sections string =
         M.fromList assocList
 
 euclidian2d :: (Int, Int) -> (Int, Int) -> Integer
-euclidian2d (x, y) (x', y') = 
+euclidian2d (x, y) (x', y') =
     let
         xd = toInteger x - toInteger x'
         yd = toInteger y - toInteger y'
@@ -104,8 +105,8 @@ readOptTour string =
         getFromTourSection ("TOUR_SECTION" : rs) = rs
         getFromTourSection (x : rs) = getFromTourSection rs
         fromTourSection = getFromTourSection ls
-        tourSectionRaw = reverse $ tail $ reverse fromTourSection
-    in map (\x -> x-1) $ map read tourSectionRaw
+        tourSectionRaw = init fromTourSection
+    in map ((\x -> x-1) . read) tourSectionRaw
 
 readTSP :: String -> TSP
 readTSP string =
@@ -115,12 +116,20 @@ readTSP string =
         n = read $ ss M.! "DIMENSION"
         nodeCoordsRaw = ss M.! "NODE_COORD_SECTION"
         ws = words nodeCoordsRaw
-        is = map (read) ws :: [Int]
+        is = map read ws :: [Int]
         ts = triples is
         coordsList = map (\(x,y,z) -> (y,z)) ts
         coords = M.fromList $ zip [0..] coordsList
     in
          TSP { n = n, costOf = weight coords }
+
+
+
+
+
+
+
+
 
 -- frequency :: Ord a => [a] -> [(Int,a)] 
 -- frequency list = map (\l -> (length l, head l)) (L.group (L.sort list))

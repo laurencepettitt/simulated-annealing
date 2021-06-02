@@ -1,0 +1,7 @@
+cradle:
+  cabal:
+    - path: "./"
+      component: "lib:simulated-annealing"
+
+    - path: "app/Main.hs"
+      component: "simulated-annealing:exe:main"
