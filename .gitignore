@@ -1,4 +1,5 @@
 # trivial gitignore file
+scratch.hs
 .cabal-sandbox/
 cabal.sandbox.config
 cabal.project.local*

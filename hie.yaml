@@ -1,6 +1,6 @@
 cradle:
   cabal:
-    - path: "./"
+    - path: "src"
       component: "lib:simulated-annealing"
 
     - path: "app/Main.hs"

@@ -4,7 +4,7 @@ module Main where
 
 import SimulatedAnnealing
 import SimulatedAnnealing.TSP
-import SimulatedAnnealing.TSPLIB95
+import SimulatedAnnealing.TSPLIB95 hiding (Parser)
 import qualified Data.Map as M
 -- import qualified Data.List as L (sort)
 -- import Data.Maybe

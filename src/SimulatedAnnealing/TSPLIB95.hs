@@ -2,12 +2,14 @@ module SimulatedAnnealing.TSPLIB95 where
 
 import SimulatedAnnealing
 import SimulatedAnnealing.TSP
+import Prelude hiding (fail)
+import Control.Monad hiding (fail)
+import Data.Char
 import qualified Data.Map as M
 import qualified Data.List as L (intercalate, stripPrefix, sortBy)
-import Data.Maybe
+import Data.Maybe ( catMaybes, isJust, listToMaybe )
 import qualified Data.Text as T
 import Data.Ord (comparing)
--- import Data.Function (on)
 import System.Random (mkStdGen)
 import qualified Data.Sequence as S
 import Control.Monad.State (runState)
@@ -124,31 +126,94 @@ readTSP string =
          TSP { n = n, costOf = weight coords }
 
 
+newtype Parser a = Parser (String -> Maybe (a, String))
+
+fail :: Parser a
+fail = Parser (const Nothing)
+
+anyChar :: Parser Char
+anyChar = Parser (\s ->
+    case s of
+        "" -> Nothing
+        c : cs -> Just (c, cs)
+    )
+
+apply :: Parser a -> String -> Maybe (a, String)
+apply (Parser p) = p
+
+(<|>) :: Parser a -> Parser a -> Parser a
+p <|> q = Parser (\s ->
+    case apply p s of
+        Just (x, s') -> Just (x, s')
+        Nothing -> apply q s
+    )
+
+instance Monad Parser where
+    return x = Parser (\s -> Just (x, s))
+
+    p >>= q = Parser (\s -> do
+            (x, s') <- apply p s
+            (y, s'') <- apply (q x) s'
+            return (y, s'')
+        )
+
+instance Applicative Parser where
+    pure = return
+    (<*>) = ap
+
+instance Functor Parser where
+    fmap = liftM
+
+satisfy :: (Char -> Bool) -> Parser Char
+satisfy f = do
+    c <- anyChar
+    if f c then return c else fail
+
+digit :: Parser Char
+digit = satisfy isDigit
+
+letter :: Parser Char
+letter = satisfy isAlpha
+
+space :: Parser Char
+space = satisfy isSpace
+
+alphaNum :: Parser Char
+alphaNum = letter <|> digit
+
+none :: Parser [a]
+none = return []
+
+many :: Parser a -> Parser [a]
+many p = many1 p <|> none
+
+many1 :: Parser a -> Parser [a]
+many1 p = do
+    x <- p
+    xs <- many p
+    return (x : xs)
+
+digits :: Parser String
+digits = many digit
+
+digits1 :: Parser String
+digits1 = many1 digit
+
+int :: Parser Int
+int = do read <$> digits1
+
+token :: Parser a -> Parser a
+token p = many space >> p
+
+sym :: Char -> Parser Char
+sym c = token (satisfy (==c))
 
 
 
+-- data Specs = 
+
+-- data TSPLIB95 = TSPLIB95 Specs Data
 
 
-
-
--- frequency :: Ord a => [a] -> [(Int,a)] 
--- frequency list = map (\l -> (length l, head l)) (L.group (L.sort list))
-
--- stats :: IO ()
--- stats = do
---     let
---         folder = "./ALL_tsp/"
---     files <- getDirectoryContents folder
---     let
---         filePaths = map (folder ++) files
---         problemFiles = filter (L.isSuffixOf ".tsp") filePaths
---     problemFilesContent <- mapM readFile problemFiles
---     let
---         problems = map sections problemFilesContent
---         types = map (M.! "EDGE_WEIGHT_TYPE") problems
---         freqs = frequency types
---         freqsSorted = L.reverse $ L.sortBy (comparing fst) freqs
---         top5 = take 5 freqsSorted
---         rest = drop 5 freqsSorted
---     print $ top5
---     print $ rest
+-- tsplib95 :: Parser a
+-- tsplib95 = spec >> data
