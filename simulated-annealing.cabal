@@ -21,20 +21,24 @@ maintainer:         laurencepettitt@gmail.com
 -- category:
 extra-source-files: CHANGELOG.md
 
+-- library
+    -- exposed-modules:
+        -- Data.TSPLIB95
 
 library
     exposed-modules:
-        SimulatedAnnealing
-        SimulatedAnnealing.TSP
-        SimulatedAnnealing.TSPLIB95
-        SimulatedAnnealing.Shuffle
+        Control.SimulatedAnnealing
+        Control.SimulatedAnnealing.TSP
+        Data.TSP
+        Data.TSPLIB95
 
     build-depends:    
         base ^>=4.14.1.0,
         containers ^>=0.6.4.1,
         mtl ^>=2.2.2,
         text ^>=1.2.4.1,
-        random ^>=1.2.0
+        random ^>=1.2.0,
+        parsec ^>=3.1.14.0
 
     hs-source-dirs:   src
     default-language: Haskell2010
@@ -56,6 +60,15 @@ executable main
         random ^>=1.2.0,
         random-shuffle ^>=0.0.4,
         directory ^>=1.3.6.1,
-        optparse-applicative ^>=0.16.1.0,
+        optparse-applicative ^>=0.16.1.0
+        
     hs-source-dirs:   app
     default-language: Haskell2010
+
+-- executable scratch
+    -- main-is:          scratch.hs
+    
+    --build-depends:
+        --base ^>=4.14.1.0,
+        --mtl ^>=2.2.2,
+        --parsec ^>=3.1.14.0

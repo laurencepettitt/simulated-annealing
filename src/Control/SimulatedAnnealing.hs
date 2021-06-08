@@ -1,8 +1,10 @@
-module SimulatedAnnealing where
+module Control.SimulatedAnnealing where
     
 import System.Random
 import Control.Monad.State
 import Data.Foldable (foldlM)
+
+type Temp = Double
 
 type AState = State StdGen
 

@@ -1,10 +1,9 @@
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE NamedFieldPuns #-}
 module Main where
 
-import SimulatedAnnealing
-import SimulatedAnnealing.TSP
-import SimulatedAnnealing.TSPLIB95 hiding (Parser)
+import Data.TSP ( CostFunc )
+import Data.TSPLIB95 ( readTSP )
+import Control.SimulatedAnnealing.TSP
 import qualified Data.Map as M
 -- import qualified Data.List as L (sort)
 -- import Data.Maybe
@@ -74,37 +73,24 @@ main = execParser opts >>= run
             progDesc "Solve Travelling Salesmen Problems (TSP) with Simulated Annealing" <>
             header "SimulatedAnnealing" )
 
-printProgress :: TSP -> Options -> Solution -> IO ()
-printProgress tsp@(TSP{..}) Options{..} (t,c) = do
+printProgress :: Int -> CostFunc -> Options -> Solution -> IO ()
+printProgress dim costF opts (t,c) = do
     putStrLn "Running.."
     let
-        tourOk = isTourOk tsp (t,c)
-        costOk = isCostOk tsp (t,c)
+        tourOk = isTourOk dim (t,c)
+        costOk = isCostOk costF (t,c)
         failTxt = "Error: Solution is not valid: " ++
-            if (not costOk) then "Final cost '"++ show c ++"' does not match actual '"++  show (tourCostBy costOf t) ++"'." 
+            if (not costOk) then "Final cost '"++ show c ++"' does not match actual '"++  show (tourCostBy costF t) ++"'." 
             else if (not tourOk) then "Tour is not valid." else ""
         resTxt c' n' = "Cost: "++ show c' ++" found in under "++ show n' ++" epochs. Here is the tour.."
-        outTxt = if isSolutionOk tsp (t,c) then resTxt c n else failTxt
+        outTxt = if tourOk && costOk then resTxt c dim else failTxt
     print $ outTxt
     print $ toList t
 
 run :: Options -> IO ()
 run opts = do
     contents <- readFile $ filePath opts
-    let tsp = readTSP contents
+    let (dim, costF) = readTSP contents
     -- Run solver
-    printProgress tsp opts $ solveTSP tsp opts
+    printProgress dim costF opts $ solveTSP dim costF (seed opts) (maxEpochs opts) (minTemp opts) (maxTemp opts)
 
-solveTSP :: TSP -> Options -> Solution
-solveTSP tsp@(TSP{..}) Options{..} =
-    let
-        -- Setup annealing schedule
-        temps = linearTempSched maxEpochs maxTemp minTemp
-        -- Create initial solution
-        init = trivialSolution n costOf
-        -- Create PRNG
-        gen = (mkStdGen seed)
-        -- Create state
-        solveState = solve (moveTSP tsp) init temps
-        -- Run solver
-    in evalState solveState gen
