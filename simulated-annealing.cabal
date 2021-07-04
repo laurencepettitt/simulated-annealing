@@ -1,74 +1,46 @@
-cabal-version:      2.4
-name:               simulated-annealing
-version:            0.1.0.0
-
--- A short (one-line) description of the package.
+cabal-version:          3.4
+name:                   simulated-annealing
+version:                0.1.0.0
 -- synopsis:
-
--- A longer description of the package.
 -- description:
-
--- A URL where users can report bugs.
--- bug-reports:
-
--- The license under which the package is released.
--- license:
-author:             Laurence Pettitt
-maintainer:         laurencepettitt@gmail.com
-
--- A copyright notice.
--- copyright:
--- category:
-extra-source-files: CHANGELOG.md
-
--- library
-    -- exposed-modules:
-        -- Data.TSPLIB95
+author:                 Laurence Pettitt
+maintainer:             laurencepettitt@gmail.com
 
 library
-    exposed-modules:
-        Control.SimulatedAnnealing
-        Control.SimulatedAnnealing.TSP
-        Data.TSP
-        Data.TSPLIB95
-
-    build-depends:    
-        base ^>=4.14.1.0,
-        containers ^>=0.6.4.1,
-        mtl ^>=2.2.2,
-        text ^>=1.2.4.1,
-        random ^>=1.2.0,
-        parsec ^>=3.1.14.0
-
-    hs-source-dirs:   src
-    default-language: Haskell2010
+    exposed-modules:    GTSP
+                        TSPLIB95
+                        SimulatedAnnealing
+                        SimulatedAnnealing.TSP
+    build-depends:      base ^>=4.14.1.0,
+                        containers ^>=0.6.4.1,
+                        mtl ^>=2.2.2,
+                        text ^>=1.2.4.1,
+                        random ^>=1.2.0,
+                        scientific ^>=0.3.7.0,
+                        megaparsec ^>=9.0.1,
+                        parser-combinators ^>=1.3.0
+    hs-source-dirs:     src
+    default-language:   Haskell2010
 
 executable main
-    main-is:          Main.hs
+    main-is:            Main.hs
+    build-depends:      base ^>=4.14.1.0,
+                        simulated-annealing,
+                        containers ^>=0.6.4.1,
+                        mtl ^>=2.2.2,
+                        text ^>=1.2.4.1,
+                        random ^>=1.2.0,
+                        random-shuffle ^>=0.0.4,
+                        directory ^>=1.3.6.1,
+                        optparse-applicative ^>=0.16.1.0
+    hs-source-dirs:     app
+    default-language:   Haskell2010
 
-    -- Modules included in this executable, other than Main.
-    -- other-modules:
 
-    -- LANGUAGE extensions used by modules in this package.
-    -- other-extensions:
-    build-depends:
-        base ^>=4.14.1.0,
-        simulated-annealing ^>=0.1.0.0,
-        containers ^>=0.6.4.1,
-        mtl ^>=2.2.2,
-        text ^>=1.2.4.1,
-        random ^>=1.2.0,
-        random-shuffle ^>=0.0.4,
-        directory ^>=1.3.6.1,
-        optparse-applicative ^>=0.16.1.0
-        
-    hs-source-dirs:   app
-    default-language: Haskell2010
-
--- executable scratch
-    -- main-is:          scratch.hs
-    
-    --build-depends:
-        --base ^>=4.14.1.0,
-        --mtl ^>=2.2.2,
-        --parsec ^>=3.1.14.0
+Test-Suite test-simulated-annealing
+    type:               exitcode-stdio-1.0
+    main-is:            Main.hs
+    hs-source-dirs:     test
+    build-depends:      base ^>=4.14.1.0,
+                        hspec ^>=2.8.2,
+                        simulated-annealing

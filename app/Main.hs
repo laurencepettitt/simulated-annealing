@@ -1,23 +1,13 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module Main where
 
-import Data.TSP ( CostFunc )
-import Data.TSPLIB95 ( readTSP )
-import Control.SimulatedAnnealing.TSP
-import qualified Data.Map as M
--- import qualified Data.List as L (sort)
--- import Data.Maybe
--- import qualified Data.Text as T
--- import Data.Ord (comparing)
--- import Data.Function (on)
-import System.Random (mkStdGen)
-import qualified Data.Sequence as S
-import Control.Monad.State (evalState)
-import Data.Foldable (toList)
--- import System.Directory
--- import System.Environment  
+import Control.Arrow
 import Options.Applicative
-import Debug.Trace
+import Data.Foldable ( toList )
+import qualified SimulatedAnnealing as SA
+import SimulatedAnnealing.TSP
+import TSPLIB95 ( showError, readEitherTSP )
+import GTSP
 
 data Options = Options {
     filePath :: FilePath,
@@ -25,7 +15,7 @@ data Options = Options {
     maxTemp :: Double,
     minTemp :: Double,
     seed :: Int
-} deriving (Show)
+} deriving Show
 
 filePathParser :: Parser FilePath
 filePathParser = strOption (
@@ -59,38 +49,36 @@ minTempParser = option auto (
     value 0 <>
     help "Minimum temperature of the simulation")
 
--- versionParser :: Parser (a -> a)
--- versionParser = infoOption "0.0.0" (long "version" <> help "Display version")
-
 optionsParser :: Parser Options
 optionsParser = Options <$> filePathParser <*> maxEpochsParser <*> maxTempParser <*> minTempParser <*> seedParser
 
 main :: IO ()
 main = execParser opts >>= run
     where
-        opts = info (optionsParser <**>  helper) ( 
+        opts = info (optionsParser <**>  helper) (
             fullDesc <>
             progDesc "Solve Travelling Salesmen Problems (TSP) with Simulated Annealing" <>
             header "SimulatedAnnealing" )
 
-printProgress :: Int -> CostFunc -> Options -> Solution -> IO ()
-printProgress dim costF opts (t,c) = do
-    putStrLn "Running.."
-    let
-        tourOk = isTourOk dim (t,c)
-        costOk = isCostOk costF (t,c)
-        failTxt = "Error: Solution is not valid: " ++
-            if (not costOk) then "Final cost '"++ show c ++"' does not match actual '"++  show (tourCostBy costF t) ++"'." 
-            else if (not tourOk) then "Tour is not valid." else ""
-        resTxt c' n' = "Cost: "++ show c' ++" found in under "++ show n' ++" epochs. Here is the tour.."
-        outTxt = if tourOk && costOk then resTxt c dim else failTxt
-    print $ outTxt
-    print $ toList t
+optsToParams opts tsp = SA.Params {
+    SA.seed = seed opts,
+    SA.tempMax = maxTemp opts,
+    SA.tempMin = minTemp opts ,
+    SA.timeMax = fromIntegral $ maxEpochs opts,
+    SA.tempAt = SA.linearTemp (maxTemp opts) (minTemp opts) (fromIntegral $ maxEpochs opts),
+    SA.nextSolTo = nextSolTSP tsp
+}
+
+solve opts tsp = solveTSP (optsToParams opts tsp) tsp
 
 run :: Options -> IO ()
 run opts = do
-    contents <- readFile $ filePath opts
-    let (dim, costF) = readTSP contents
-    -- Run solver
-    printProgress dim costF opts $ solveTSP dim costF (seed opts) (maxEpochs opts) (minTemp opts) (maxTemp opts)
-
+    putStrLn "Running.."
+    tsp <- readEitherTSP (filePath opts)
+    let history = right (solve opts) tsp
+    case history of
+        Left err -> putStrLn $ showError err
+        Right sol -> do
+            print $ (SA.sol . head) sol
+            putStrLn $ "Steps: " ++ show (length sol)
+    -- either (putStrLn . showError) (showSol) history
