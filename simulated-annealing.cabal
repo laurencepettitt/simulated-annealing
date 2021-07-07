@@ -11,28 +11,31 @@ library
                         TSPLIB95
                         SimulatedAnnealing
                         SimulatedAnnealing.TSP
-    build-depends:      base ^>=4.14.1.0,
-                        containers ^>=0.6.4.1,
-                        mtl ^>=2.2.2,
-                        text ^>=1.2.4.1,
-                        random ^>=1.2.0,
-                        scientific ^>=0.3.7.0,
-                        megaparsec ^>=9.0.1,
-                        parser-combinators ^>=1.3.0
+    build-depends:      base,
+                        containers,
+                        mtl,
+                        text,
+                        random,
+                        scientific,
+                        megaparsec,
+                        aeson,
+                        parser-combinators
     hs-source-dirs:     src
     default-language:   Haskell2010
 
 executable main
     main-is:            Main.hs
-    build-depends:      base ^>=4.14.1.0,
+    build-depends:      base,
                         simulated-annealing,
-                        containers ^>=0.6.4.1,
-                        mtl ^>=2.2.2,
-                        text ^>=1.2.4.1,
-                        random ^>=1.2.0,
-                        random-shuffle ^>=0.0.4,
-                        directory ^>=1.3.6.1,
-                        optparse-applicative ^>=0.16.1.0
+                        containers,
+                        mtl,
+                        text,
+                        random,
+                        random-shuffle,
+                        directory,
+                        optparse-applicative,
+                        aeson,
+                        bytestring
     hs-source-dirs:     app
     default-language:   Haskell2010
 
@@ -41,6 +44,6 @@ Test-Suite test-simulated-annealing
     type:               exitcode-stdio-1.0
     main-is:            Main.hs
     hs-source-dirs:     test
-    build-depends:      base ^>=4.14.1.0,
-                        hspec ^>=2.8.2,
+    build-depends:      base,
+                        hspec,
                         simulated-annealing

@@ -9,7 +9,7 @@ import System.Random ( uniformR, mkStdGen )
 import Control.Monad.State ( MonadState(put, get), evalState )
 import Data.Foldable ( Foldable(toList, foldr') )
 import qualified Data.List as L ( nub )
-import qualified Data.Sequence as S ( Seq, index, update, fromList, unstableSort )
+import qualified Data.Sequence as S ( Seq, index, update, fromList, unstableSort, empty )
 import SimulatedAnnealing
 import GTSP
 
@@ -37,8 +37,8 @@ ix t i = fromIntegral i `mod` fromIntegral (length t)
 (!?) :: Tour -> Int -> Node
 (!?) t i = S.index t $ ix t i
 
-sortSolution :: Tour -> Tour
-sortSolution = S.unstableSort
+sortTour :: Tour -> Tour
+sortTour = S.unstableSort
 
 update :: Tour -> Move -> Tour
 update t (i, j) =
@@ -74,7 +74,7 @@ moveEnergyDelta t (i, j) sz cost =
         edges' = L.nub $ map (map (swap i j)) edges
     in sumCost edges' - sumCost edges
 
--- type MoveFunc = Int -> CostFunc -> (SimState -> AState SimState)
+-- type MoveFunc = Int -> CostFunc -> (Epoch -> AState Epoch)
 
 nextSolTSP :: (GTSP tsp) => tsp -> (Solution Tour -> AState (Solution Tour))
 nextSolTSP tsp sol = do
@@ -91,6 +91,9 @@ energyBy cost ns = fst $ foldr' f (0, h) ns where
     f curr (acc, prev) = (acc + cost (curr, prev), curr)
     -- Need h because a tour "loops" back to start)
     h = head $ toList ns
+
+emptyTour :: Tour
+emptyTour = S.empty
 
 toTour :: [Node] -> Tour
 toTour = S.fromList
@@ -111,5 +114,8 @@ tourEnergy tsp = energyBy (costFunc tsp)
 tourToSolution :: GTSP a => a -> Tour -> Solution Tour
 tourToSolution tsp t = Solution t (tourEnergy tsp t)
 
-solveTSP :: GTSP tsp => Params Tour -> tsp -> [SimState Tour]
-solveTSP params tsp = runSim params (initSim (tempAt params) (tourToSolution tsp (trivialTour tsp)))
+initStateTSP :: GTSP tsp => Params Tour -> tsp -> Epoch Tour
+initStateTSP params tsp = initState (tempAt params) (tourToSolution tsp (trivialTour tsp))
+
+minimiseTSP :: GTSP tsp => Params Tour -> tsp -> [Epoch Tour]
+minimiseTSP params tsp = evalMinimise params (initStateTSP params tsp)

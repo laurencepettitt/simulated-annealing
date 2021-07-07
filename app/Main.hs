@@ -1,12 +1,22 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 module Main where
 
+import GHC.Generics
+import System.Random
 import Control.Arrow
 import Options.Applicative
+import Control.Monad.State.Lazy
 import Data.Foldable ( toList )
+import Data.Traversable (traverse)
+import Data.Aeson hiding (Options)
+import Data.Aeson.Encoding (encodingToLazyByteString)
+import Data.Aeson.Types (listEncoding)
+import qualified Data.ByteString.Lazy as B
 import qualified SimulatedAnnealing as SA
 import SimulatedAnnealing.TSP
-import TSPLIB95 ( showError, readEitherTSP )
+import TSPLIB95 ( TSP, showError, readEitherTSP )
 import GTSP
 
 data Options = Options {
@@ -16,6 +26,17 @@ data Options = Options {
     minTemp :: Double,
     seed :: Int
 } deriving Show
+
+data ExpOptions = ExpOptions {
+    iterations :: Int,
+    expOptions :: Options
+}
+
+data SolveOptions = SolveOptions {
+    slvOptions :: Options
+}
+
+data Cmd = Experiment ExpOptions | Solve SolveOptions
 
 filePathParser :: Parser FilePath
 filePathParser = strOption (
@@ -49,19 +70,30 @@ minTempParser = option auto (
     value 0 <>
     help "Minimum temperature of the simulation")
 
+iterationsParser :: Parser Int
+iterationsParser = option auto (
+    long "trials" <>
+    metavar "NUM" <>
+    value 5 <>
+    help "Number of times to run experiment")
+
 optionsParser :: Parser Options
 optionsParser = Options <$> filePathParser <*> maxEpochsParser <*> maxTempParser <*> minTempParser <*> seedParser
 
-main :: IO ()
-main = execParser opts >>= run
-    where
-        opts = info (optionsParser <**>  helper) (
-            fullDesc <>
-            progDesc "Solve Travelling Salesmen Problems (TSP) with Simulated Annealing" <>
-            header "SimulatedAnnealing" )
+experimentOptions :: Parser Cmd
+experimentOptions = Experiment <$> (ExpOptions <$> iterationsParser <*> optionsParser)
 
+solveOptions :: Parser Cmd
+solveOptions = Solve <$> (SolveOptions <$> optionsParser)
+
+cmdParser :: Parser Cmd
+cmdParser = subparser (
+    command "experiment" (info experimentOptions (progDesc "Run experiments (multiple simulations)")) <>
+    command "solve" (info solveOptions (progDesc "Solve a TSP (one simulation)")))
+
+optsToParams :: Options -> TSP -> SA.Params Tour
 optsToParams opts tsp = SA.Params {
-    SA.seed = seed opts,
+    SA.initSeed = seed opts,
     SA.tempMax = maxTemp opts,
     SA.tempMin = minTemp opts ,
     SA.timeMax = fromIntegral $ maxEpochs opts,
@@ -69,16 +101,56 @@ optsToParams opts tsp = SA.Params {
     SA.nextSolTo = nextSolTSP tsp
 }
 
-solve opts tsp = solveTSP (optsToParams opts tsp) tsp
+experiment :: Int -> (SA.Params Tour) -> TSP -> [[SA.Epoch Tour]]
+experiment iters params tsp =
+    let
+        initialState = initStateTSP params tsp
+        initialGen = mkStdGen $ SA.initSeed params
+        exp = replicateM iters $ SA.minimiseM params initialState
+    in
+        evalState exp initialGen
 
-run :: Options -> IO ()
-run opts = do
-    putStrLn "Running.."
-    tsp <- readEitherTSP (filePath opts)
-    let history = right (solve opts) tsp
-    case history of
+solve :: (SA.Params Tour) -> TSP -> SA.Epoch Tour
+solve params tsp =
+    let
+        initialState = initStateTSP params tsp
+        initialGen = mkStdGen $ SA.initSeed params
+    in 
+        head $ evalState (SA.minimiseM params initialState) initialGen
+
+epochToEncoding' :: SA.Epoch s -> Encoding
+epochToEncoding' (ep) = 
+    pairs ("time" .= SA.time ep <>
+            "temp" .= SA.temp ep <>
+            "energy" .= SA.energy (SA.sol ep) <>
+            "bestEnergy" .= SA.energy (SA.bestSol ep) <>
+            "isNewSolution" .= SA.isNewSolution ep)
+
+execReadTSP :: Options -> (TSP -> IO ()) -> IO ()
+execReadTSP opts handle = do
+    tspRead <- readEitherTSP (filePath opts)
+    case tspRead of
         Left err -> putStrLn $ showError err
-        Right sol -> do
-            print $ (SA.sol . head) sol
-            putStrLn $ "Steps: " ++ show (length sol)
-    -- either (putStrLn . showError) (showSol) history
+        Right tsp -> handle tsp
+
+execExperiment :: Int -> Options -> TSP -> IO ()
+execExperiment iters opts tsp =
+    let putRes = B.putStr . encodingToLazyByteString . listEncoding epochToEncoding'
+        res = SA.flattenTrials $ experiment iters (optsToParams opts tsp) tsp
+    in putRes res
+
+execSolve :: Options -> TSP -> IO ()
+execSolve opts tsp = B.putStr $ encode $ solve (optsToParams opts tsp) tsp
+
+exec :: Cmd -> IO ()
+exec (Experiment (ExpOptions iters opts)) = execReadTSP opts $ execExperiment iters opts
+exec (Solve (SolveOptions opts)) = execReadTSP opts $ execSolve opts
+
+main :: IO ()
+main = execParser cmd >>= exec
+    where
+        cmd = info (cmdParser <**> helper) (
+            fullDesc <>
+            progDesc "Commands to solve Travelling Salesmen Problems (TSP) with Simulated Annealing" <>
+            header "SimulatedAnnealing" )
+
