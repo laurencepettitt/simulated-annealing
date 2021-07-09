@@ -8,29 +8,26 @@ sns.set_theme(style="darkgrid")
 
 numArgs = len(sys.argv)
 
-# output from Main.hs
-if numArgs == 1:
-    raw_data = input()
-    hists = json.loads(raw_data)
-elif numArgs == 2:
-    with open(sys.argv[1], 'r') as f:
-        hists = json.load(f)
-else:
+if numArgs != 2:
     print("Wrong number of arguments.", file=sys.stderr)
     print("Usage: plot [FILE]")
     print("Prints energy timeseries of data in FILE.")
     print("If no FILE given, input is standard input.")
     exit(1)
 
-# list of lists (inner list is history of state through simulation)
-hist_data = hists
+# output from Main.hs
+in_path = sys.argv[1]
+with open(in_path, 'r') as f:
+    hists = json.load(f)
 
-ets = pd.DataFrame(hist_data)
+    # list of lists (inner list is history of state through simulation)
+    hist_data = hists
 
-sns_plot = sns.relplot(x="time", y="energy",
-            kind="line",
-            ci="sd",
-            data=ets)
+    ets = pd.DataFrame(hist_data)
 
+    sns_plot = sns.relplot(x="time", y="energy",
+                kind="line",
+                ci="sd",
+                data=ets)
 
-plt.savefig("output.png")
+    plt.savefig(in_path + ".png")

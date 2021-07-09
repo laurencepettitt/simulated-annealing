@@ -23,7 +23,7 @@ cabal -v0 run main -- experiment --trials 2 --file ./src/TSPLIB95/a280.tsp --see
 ```
 - Plot the results (requires python 3.9.x)
 ```bash
-python plot.py energy-timeseries output.txt output.png
+python plot.py output.txt output.png
 ```
 - With good parameters, solve the tsp
 ```bash

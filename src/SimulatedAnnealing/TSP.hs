@@ -16,9 +16,6 @@ import GTSP
 -- |TSP Solution is a Hamiltonian Tour
 type Tour = S.Seq Node
 
--- showTour :: Solution -> String
--- showTour (t, c) = "Cost: "++ show c ++"\nTour: "++ show (toList t)
-
 -- |A move from one solution to a neighbouring solution is pair of indicies
 -- representing a swap between the corresponding nodes in the tour
 type Move = (Int, Int)
@@ -63,10 +60,10 @@ swap x y a
         | y == a = x
         | otherwise = a
 
-moveEnergyDelta :: Tour -> Move -> Int -> CostFunc -> Cost
-moveEnergyDelta t (i, j) sz cost =
+moveCostDelta :: Tour -> Move -> Int -> CostFunc -> Cost
+moveCostDelta t (i, j) sz costOf =
     let
-        costIx x y = cost (t !? x, t !? y)
+        costIx x y = costOf (t !? x, t !? y)
         sumCost = sum . map (\[p,q] -> costIx p q)
         (a:(b:(c:_))) = rotate (i-1) $ sz
         (d:(e:(f:_))) = rotate (j-1) $ sz
@@ -74,21 +71,19 @@ moveEnergyDelta t (i, j) sz cost =
         edges' = L.nub $ map (map (swap i j)) edges
     in sumCost edges' - sumCost edges
 
--- type MoveFunc = Int -> CostFunc -> (Epoch -> AState Epoch)
-
 nextSolTSP :: (GTSP tsp) => tsp -> (Solution Tour -> AState (Solution Tour))
 nextSolTSP tsp sol = do
     -- Get the indices of a random four node sub path of the tour
     (i, j) <- randomMove (size tsp)
     -- Calculate energy change
-    let delta = moveEnergyDelta (value sol) (i, j) (size tsp) (costFunc tsp)
+    let delta = moveCostDelta (value sol) (i, j) (size tsp) (costFunc tsp)
         nextTour = update (value sol) (i, j)
     -- Return the new Solution
     return $ Solution nextTour (energy sol + delta)
 
-energyBy :: (Foldable t) => CostFunc -> t Node -> Cost
-energyBy cost ns = fst $ foldr' f (0, h) ns where
-    f curr (acc, prev) = (acc + cost (curr, prev), curr)
+costBy :: (Foldable t) => CostFunc -> t Node -> Cost
+costBy costOf ns = fst $ foldr' f (0, h) ns where
+    f curr (acc, prev) = (acc + costOf (curr, prev), curr)
     -- Need h because a tour "loops" back to start)
     h = head $ toList ns
 
@@ -104,15 +99,11 @@ fromTour = toList
 trivialTour :: GTSP tsp => tsp -> Tour
 trivialTour tsp = toTour (nodes tsp)
 
-tourEnergy :: (GTSP a) => a -> Tour -> Cost
-tourEnergy tsp = energyBy (costFunc tsp)
-
--- randomSolution :: StdGen -> Int -> CostFunc -> [Int]
--- randomSolution g numNodes edgeCost = (tour (shuffle' nodes numNodes g), tourCostBy edgeCost nodes) where
-    -- nodes = [0..numNodes]
+tourCost :: (GTSP a) => a -> Tour -> Cost
+tourCost tsp = costBy (costFunc tsp)
 
 tourToSolution :: GTSP a => a -> Tour -> Solution Tour
-tourToSolution tsp t = Solution t (tourEnergy tsp t)
+tourToSolution tsp t = Solution t (tourCost tsp t)
 
 initStateTSP :: GTSP tsp => Params Tour -> tsp -> Epoch Tour
 initStateTSP params tsp = initState (tempAt params) (tourToSolution tsp (trivialTour tsp))

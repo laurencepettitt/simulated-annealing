@@ -302,11 +302,11 @@ field = do
 fieldsParser :: SParser TSP
 fieldsParser = fromList <$> manyTill field (lift endOfTSP)
 
-----------------------------------------------------------------------------
--- High-level methods
-
 showError :: ParseErrorBundle T.Text Void -> String
 showError = errorBundlePretty
+
+----------------------------------------------------------------------------
+-- High-level parsers
 
 tspParser :: Parser TSP
 tspParser = execStateT fieldsParser emptyTSP

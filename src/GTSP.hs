@@ -1,7 +1,6 @@
 {- |Module      :  GTSP
 
-    The module acts as an interface for different
-    Travelling Salesman Problems
+    General Travelling Salesman Problems
 -}
 module GTSP where
 
