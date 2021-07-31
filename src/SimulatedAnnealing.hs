@@ -11,7 +11,7 @@ import System.Random ( StdGen, UniformRange, uniformR, mkStdGen )
 import Control.Monad
 import Control.Monad.State.Lazy
     ( State, MonadState(put, get), evalState, runState )
-import Data.Foldable ( foldlM, maximumBy )
+import Data.Foldable ( foldlM, minimumBy )
 import Data.Aeson hiding (Options)
 import Data.Ord ( comparing )
 
@@ -75,21 +75,22 @@ uniformPos lo dim = do
     put g'
     return x
 
--- |move sol sol' accepts sol' to replace sol if it is better or
---  even if it is worse but with a probability depending on temp
 stateAccepts :: Epoch s -> Solution s -> AState Bool
 stateAccepts st newSol = do
     prob <- uniformProb
     let eDelta = energy newSol - energy (sol st)
     return $ (eDelta < 0) || prob < min 1 (exp (negate eDelta / temp st))
 
+-- |move nextSolTo sol accepts the next neigbouring solution if it is better or
+--  even if it is worse but with a probability depending on temp
 move :: (Solution s -> AState (Solution s)) -> Epoch s -> AState (Epoch s)
 move nextSolTo st = do
     nextSol <- nextSolTo (sol st)
     accepts <- stateAccepts st nextSol
+    let sol' = if accepts then nextSol else sol st
     return $ st {
-        sol = if accepts then nextSol else sol st,
-        bestSol = maximumBy (comparing energy) [nextSol, bestSol st],
+        sol = sol',
+        bestSol = minimumBy (comparing energy) [sol', bestSol st],
         isNewSolution = accepts
     }
 
@@ -106,9 +107,6 @@ epoch  p st = move (nextSolTo p) st >>= tick p
 epoch' :: Params s -> [Epoch s] -> AState [Epoch s]
 epoch' p (st : rs) = epoch p st >>= (\st' -> return (st': st : rs))
 epoch' p [] = return []
-
--- epoch'' :: Params s -> AState (Epoch s) -> AState (Epoch s)
--- epoch'' p a = a >>= (move (nextSolTo p) >=> tick p)
 
 inBounds :: Params s -> Epoch s -> Bool
 inBounds p st = temp st >= tempMin p && temp st <= tempMax p && time st <= timeMax p
@@ -144,7 +142,6 @@ acceptanceRate r =
 
 ----------------------------------------------------------------------------
 -- Temperature Schedules
-
 
 linearTemp hi lo n k = lo + (hi - lo) * ((n - k) / n)
 
