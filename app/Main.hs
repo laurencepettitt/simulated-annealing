@@ -24,7 +24,8 @@ data Options = Options {
     maxEpochs :: Int,
     maxTemp :: Double,
     minTemp :: Double,
-    seed :: Int
+    seed :: Int,
+    rndInitTour :: Bool
 } deriving Show
 
 data ExpOptions = ExpOptions {
@@ -50,6 +51,11 @@ seedParser = option auto (
     metavar "INT" <>
     value 42 <>
     help "Seed for the pseudo-random number generator")
+
+rndInitTourParser :: Parser Bool
+rndInitTourParser = switch (
+    long "random_initial_tour" <>
+    help "Randomly shuffles the initial tour, using seed")
 
 maxEpochsParser :: Parser Int
 maxEpochsParser = option auto (
@@ -78,7 +84,7 @@ iterationsParser = option auto (
     help "Number of times to run experiment")
 
 optionsParser :: Parser Options
-optionsParser = Options <$> filePathParser <*> maxEpochsParser <*> maxTempParser <*> minTempParser <*> seedParser
+optionsParser = Options <$> filePathParser <*> maxEpochsParser <*> maxTempParser <*> minTempParser <*> seedParser <*> rndInitTourParser
 
 experimentOptions :: Parser Cmd
 experimentOptions = Experiment <$> (ExpOptions <$> iterationsParser <*> optionsParser)
@@ -94,8 +100,9 @@ cmdParser = subparser (
 optsToParams :: Options -> TSP -> SA.Params Tour
 optsToParams opts tsp = SA.Params {
     SA.initSeed = seed opts,
+    SA.randomiseInitialTour = rndInitTour opts,
     SA.tempMax = maxTemp opts,
-    SA.tempMin = minTemp opts ,
+    SA.tempMin = minTemp opts,
     SA.timeMax = fromIntegral $ maxEpochs opts,
     SA.tempAt = SA.linearTemp (maxTemp opts) (minTemp opts) (fromIntegral $ maxEpochs opts),
     SA.nextSolTo = nextSolTSP tsp
@@ -153,4 +160,3 @@ main = execParser cmd >>= exec
             fullDesc <>
             progDesc "Commands to solve Travelling Salesmen Problems (TSP) with Simulated Annealing" <>
             header "SimulatedAnnealing" )
-

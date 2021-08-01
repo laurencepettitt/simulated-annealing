@@ -5,7 +5,8 @@
 -}
 module SimulatedAnnealing.TSP where
 
-import System.Random ( uniformR, mkStdGen )
+import System.Random ( StdGen, uniformR, mkStdGen )
+import System.Random.Shuffle
 import Control.Monad.State ( MonadState(put, get), evalState )
 import Data.Foldable ( Foldable(toList, foldr') )
 import qualified Data.List as L ( nub )
@@ -99,6 +100,17 @@ fromTour = toList
 trivialTour :: GTSP tsp => tsp -> Tour
 trivialTour tsp = toTour (nodes tsp)
 
+randomTour :: GTSP tsp => tsp -> StdGen -> Tour
+randomTour tsp g =
+    let t = nodes tsp
+    in toTour $ shuffle' t (length t) g
+    
+initialTour :: GTSP tsp => Params Tour -> tsp -> Tour
+initialTour params tsp = 
+    let tt = trivialTour tsp
+        rt = randomTour tsp (mkStdGen $ initSeed params)
+    in if randomiseInitialTour params then rt else tt
+
 tourCost :: (GTSP a) => a -> Tour -> Cost
 tourCost tsp = costBy (costFunc tsp)
 
@@ -106,7 +118,7 @@ tourToSolution :: GTSP a => a -> Tour -> Solution Tour
 tourToSolution tsp t = Solution t (tourCost tsp t)
 
 initStateTSP :: GTSP tsp => Params Tour -> tsp -> Epoch Tour
-initStateTSP params tsp = initState (tempAt params) (tourToSolution tsp (trivialTour tsp))
+initStateTSP params tsp = initState (tempAt params) (tourToSolution tsp $ initialTour params tsp)
 
 minimiseTSP :: GTSP tsp => Params Tour -> tsp -> [Epoch Tour]
 minimiseTSP params tsp = evalMinimise params (initStateTSP params tsp)

@@ -25,9 +25,19 @@ with open(in_path, 'r') as f:
 
     ets = pd.DataFrame(hist_data)
 
+    ets_curr = ets.drop("bestEnergy", axis=1)
+    ets_curr["energyType"] = "current"
+    
+    ets_best = ets.drop("energy", axis=1)
+    ets_best["energy"] = ets_best["bestEnergy"]
+    ets_best["energyType"] = "best"
+    
+    ets_both = pd.concat([ets_curr, ets_best])
+
     sns_plot = sns.relplot(x="time", y="energy",
                 kind="line",
+                hue="energyType",
                 ci="sd",
-                data=ets)
+                data=ets_both)
 
     plt.savefig(in_path + ".png")

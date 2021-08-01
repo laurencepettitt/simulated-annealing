@@ -19,7 +19,8 @@ library
                         scientific,
                         megaparsec,
                         aeson,
-                        parser-combinators
+                        parser-combinators,
+                        random-shuffle
     hs-source-dirs:     src
     default-language:   Haskell2010
 

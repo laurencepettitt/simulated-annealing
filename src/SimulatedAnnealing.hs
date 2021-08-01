@@ -42,6 +42,7 @@ instance (ToJSON s) => ToJSON (Epoch s) where
 
 data Params s = Params {
     initSeed :: Int,
+    randomiseInitialTour :: Bool,
     tempMax :: Temp,
     tempMin :: Temp,
     timeMax :: Time,
@@ -49,8 +50,9 @@ data Params s = Params {
     nextSolTo :: Solution s -> AState (Solution s)
 }
 
-mkParams seed' tempMax' tempMin' timeMax' tempFunc nextSolFunc = Params {
+mkParams seed' randomiseInitialTour' tempMax' tempMin' timeMax' tempFunc nextSolFunc = Params {
         initSeed = seed',
+        randomiseInitialTour = randomiseInitialTour',
         tempMax = tempMax',
         tempMin = tempMin',
         timeMax = timeMax',

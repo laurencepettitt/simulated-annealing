@@ -18,7 +18,7 @@ tspSpec name = do
         optTourPath = (basePath ++ name ++ ".opt.tour")
     Just tsp <- readMaybeTSP tspPath
     Just optTour <- readMaybeTSP optTourPath
-    let params = mkParams 43 5 0 1000000 linearTemp (nextSolTSP  tsp)
+    let params = mkParams 43 True 6 0 500000 linearTemp (nextSolTSP  tsp)
         hist = minimiseTSP params tsp
     let res_sol = sol $ head hist
     let opt_sol = optimumSolution tsp optTour
@@ -33,17 +33,17 @@ tspSpec name = do
         context "good solution" $ do
             it "has valid tour (visits all nodes)" $ do
                  nodes tsp == fromTour (sortTour val)
-            it "is consistent (cost really is the cost of the tour)" $ do 
+            it "is consistent (cost really is the cost of the tour)" $ do
                 let en_actual = tourCost tsp val
                 (abs (en_actual - en) / max en_actual en) < 0.000001
             it "is not trivial solution (e.g. [1,2,3,..,n])" $ do
                 val /= trivialTour tsp
-            it "is not worse than trivial solution" $ do
-                en <= tourCost tsp (trivialTour tsp)
+            it "is not more than 2x trivial solution" $ do
+                en <= 2 * tourCost tsp (trivialTour tsp)
             it "is not better than optimal" $ do
                 en >= en_opt
-            it "is no more than 1.5x optimal" $ do
-                en / en_opt < 1.5
+            it "is not more than 2x optimal" $ do
+                en / en_opt < 2
 
 main :: IO ()
 main = do
