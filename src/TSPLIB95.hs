@@ -115,7 +115,7 @@ euc (Coord2D (x, y)) (Coord2D (x', y')) =
     let
         xd = x - x'
         yd = y - y'
-    in sqrt $ toRealFloat $ (xd * xd) + (yd * yd)
+    in fromIntegral $ round $ sqrt $ toRealFloat $ (xd * xd) + (yd * yd)
 
 ----------------------------------------------------------------------------
 -- Parser
