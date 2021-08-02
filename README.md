@@ -17,7 +17,26 @@ cabal build
 - `GTSP` provides an interface between the two
 
 ## Executable
-- Run an experiment to help choose parameters
+The executable has two main subcommands.
+### Experiment subcommand
+Can run the simulation multiple times and returns a history of the energy of the solution found at each step of each run of the solver. The actual solution values (e.g. tours for TSP) are not returned in the output to keep the size of the output manageable.
+
+See help for more info:
+```bash
+cabal -v0 run main -- --help experiment
+```
+
+
+### Solve subcommand
+Is similiar to the experiment subcommand but can only run the simulation once and returns the solution value, as well as it's energy. The output includes "sol", which is the solution at the end of the simulation, and "bestSol" which is the best solution found throughout the whole simulation.
+
+See help for more info:
+```bash
+cabal -v0 run main -- --help solve
+```
+
+## Example usage of executable
+- Run an experiment to get a history of the state of the simulation through each trial
 ```bash
 cabal -v0 run main -- experiment --trials 2 --file ./src/TSPLIB95/a280.tsp --seed 45 --max_temp 5 --max_epochs 700000 > output.txt
 ```
@@ -25,11 +44,8 @@ cabal -v0 run main -- experiment --trials 2 --file ./src/TSPLIB95/a280.tsp --see
 ```bash
 python plot.py output.txt
 ```
-- With good parameters, solve the tsp
+- Repeat the above two steps, adjusting the parameters (seed, max_temp, max_epochs, etc) to get the best performance.
+- Once you have the best parameters, run the simulation again with those parameters, but using the solve subcommand to get the solution value.
 ```bash
 cabal -v0 run main -- solve --file ./src/TSPLIB95/a280.tsp --seed 45 --max_temp 5 --max_epochs 700000 > output.txt
-```
-- See help for more info
-```bash
-cabal -v0 run main -- --help
 ```
