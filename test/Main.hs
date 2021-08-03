@@ -18,7 +18,7 @@ tspSpec name = do
         optTourPath = (basePath ++ name ++ ".opt.tour")
     Just tsp <- readMaybeTSP tspPath
     Just optTour <- readMaybeTSP optTourPath
-    let params = mkParams 43 True 6 0 500000 linearTemp (nextSolTSP  tsp)
+    let params = mkParams 43 True 40 0 500000 linearTemp (nextSolTSP  tsp)
         hist = minimiseTSP params tsp
     let res_sol = sol $ head hist
     let opt_sol = optimumSolution tsp optTour
